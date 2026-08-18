@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { CODE_LINES, SIDEBAR_FILES, STEPS, TERM_LINES } from "../data";
 import { Scramble, useReducedMotion } from "../fx";
 
@@ -50,6 +50,13 @@ export default function Walkthrough() {
     }
     setPlaying((p) => !p);
   };
+  /* release focus on click so Space / arrows keep driving the global shortcuts */
+  const btn =
+    (fn: () => void) =>
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.blur();
+      fn();
+    };
 
   /* ---------------- playback loop ---------------- */
   useEffect(() => {
@@ -76,14 +83,13 @@ export default function Walkthrough() {
       const p = Math.min(1, elapsed.current / d);
       setProg(p);
       if (p >= 1) {
+        oneShot.current = false; // consumed — never leak into a later pause
         if (playing) {
           if (step < LAST) {
             elapsed.current = 0;
             setProg(0);
             setStep(step + 1);
           } else setPlaying(false);
-        } else {
-          oneShot.current = false; // single step finished — hold the frame
         }
         return;
       }
@@ -280,7 +286,9 @@ export default function Walkthrough() {
               {/* toolbar */}
               <div className="relative flex h-[7%] items-center gap-2 border-b border-line bg-panel px-2">
                 <button
+                  type="button"
                   tabIndex={-1}
+                  onPointerDown={(e) => e.preventDefault()}
                   className={`flex h-[68%] items-center gap-1.5 border border-mint/60 bg-mint/10 px-2.5 font-mono text-[9px] tracking-wider text-mint ${
                     step === 7 && prog > 0.5 && prog < 0.85 ? "scale-95 bg-mint/30" : ""
                   }`}
@@ -524,7 +532,7 @@ export default function Walkthrough() {
       <div className="mt-4 flex flex-wrap items-center gap-3 border border-line bg-panel px-3 py-3">
         <div className="flex items-center gap-1.5">
           <button
-            onClick={restart}
+            onClick={btn(restart)}
             title="Restart (R)"
             className="grid h-9 w-9 place-items-center border border-line text-mut transition-colors hover:border-amber hover:text-amber"
           >
@@ -534,7 +542,7 @@ export default function Walkthrough() {
             </svg>
           </button>
           <button
-            onClick={() => go(step - 1, { single: true })}
+            onClick={btn(() => go(step - 1, { single: true }))}
             title="Previous step (←)"
             className="grid h-9 w-9 place-items-center border border-line text-mut transition-colors hover:border-amber hover:text-amber"
           >
@@ -543,7 +551,7 @@ export default function Walkthrough() {
             </svg>
           </button>
           <button
-            onClick={toggle}
+            onClick={btn(toggle)}
             title="Play / pause (Space)"
             className="grid h-9 w-12 place-items-center border border-amber/70 bg-amber/10 text-amber transition-colors hover:bg-amber/20"
           >
@@ -558,7 +566,7 @@ export default function Walkthrough() {
             )}
           </button>
           <button
-            onClick={() => go(step + 1, { single: true })}
+            onClick={btn(() => go(step + 1, { single: true }))}
             title="Next step (→)"
             className="grid h-9 w-9 place-items-center border border-line text-mut transition-colors hover:border-amber hover:text-amber"
           >
@@ -569,7 +577,7 @@ export default function Walkthrough() {
         </div>
 
         <button
-          onClick={() => setSpeedIdx((i) => (i + 1) % SPEEDS.length)}
+          onClick={btn(() => setSpeedIdx((i) => (i + 1) % SPEEDS.length))}
           title="Playback speed"
           className="h-9 border border-line px-3 font-mono text-xs text-mut transition-colors hover:border-cy hover:text-cy"
         >
@@ -581,7 +589,7 @@ export default function Walkthrough() {
           {STEPS.map((s, i) => (
             <button
               key={s.id}
-              onClick={() => go(i, { single: true })}
+              onClick={btn(() => go(i, { single: true }))}
               title={`${i + 1}. ${s.title}`}
               className="group relative flex-1 overflow-hidden border border-line/70 bg-line/40 transition-colors hover:border-line2"
             >
