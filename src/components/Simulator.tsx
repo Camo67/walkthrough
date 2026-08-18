@@ -8,7 +8,7 @@ const LAST = STEPS.length - 1;
 const IDLE_CURSOR: [number, number] = [86, 12];
 
 const GROUND_BOXES = [
-  { id: "e1", x: 1.5, y: 6.8, w: 14, h: 5.4, th: 0.12 },
+  { id: "e1", x: 17.5, y: 6.6, w: 13, h: 5.8, th: 0.12 },
   { id: "e2", x: 2, y: 71, w: 96, h: 26, th: 0.4 },
   { id: "e3", x: 18, y: 46, w: 56, h: 5.2, th: 0.68 },
 ];
@@ -23,20 +23,23 @@ export default function Walkthrough() {
   const [speedIdx, setSpeedIdx] = useState(0);
   const [nonce, setNonce] = useState(0);
   const elapsed = useRef(0);
+  const oneShot = useRef(false);
   const streamRef = useRef<HTMLDivElement>(null);
 
   const speed = SPEEDS[speedIdx];
   const st = STEPS[step];
   const done = step === LAST && prog >= 1;
 
-  const go = (n: number) => {
+  const go = (n: number, opts?: { single?: boolean }) => {
     const c = Math.max(0, Math.min(LAST, n));
     elapsed.current = 0;
+    oneShot.current = !!opts?.single && !playing;
     setProg(0);
     setStep(c);
     setNonce((x) => x + 1);
   };
   const restart = () => {
+    oneShot.current = false;
     go(0);
     setPlaying(true);
   };
@@ -53,6 +56,7 @@ export default function Walkthrough() {
     const d = st.duration / speed;
     if (reduced) {
       elapsed.current = d;
+      oneShot.current = false;
       setProg(1);
       if (playing) {
         if (step < LAST) {
@@ -63,6 +67,7 @@ export default function Walkthrough() {
       }
       return;
     }
+    if (!playing && !oneShot.current) return; // paused: freeze the frame
     let raf = 0;
     let lastT = performance.now();
     const tick = (t: number) => {
@@ -77,6 +82,8 @@ export default function Walkthrough() {
             setProg(0);
             setStep(step + 1);
           } else setPlaying(false);
+        } else {
+          oneShot.current = false; // single step finished — hold the frame
         }
         return;
       }
@@ -88,8 +95,18 @@ export default function Walkthrough() {
   }, [playing, step, speed, nonce, reduced]);
 
   /* ---------------- keyboard ---------------- */
-  const api = useRef({ toggle, next: () => go(step + 1), prev: () => go(step - 1), restart });
-  api.current = { toggle, next: () => go(step + 1), prev: () => go(step - 1), restart };
+  const api = useRef({
+    toggle,
+    next: () => go(step + 1, { single: true }),
+    prev: () => go(step - 1, { single: true }),
+    restart,
+  });
+  api.current = {
+    toggle,
+    next: () => go(step + 1, { single: true }),
+    prev: () => go(step - 1, { single: true }),
+    restart,
+  };
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
@@ -414,7 +431,7 @@ export default function Walkthrough() {
             )}
 
             {/* click ripple */}
-            {st.kind === "click" && prog > 0.55 && (
+            {st.kind === "click" && prog > 0.68 && (
               <span
                 key={`rip-${step}`}
                 className="ripple pointer-events-none absolute z-20 h-10 w-10 rounded-full border-2 border-amber"
@@ -517,7 +534,7 @@ export default function Walkthrough() {
             </svg>
           </button>
           <button
-            onClick={() => go(step - 1)}
+            onClick={() => go(step - 1, { single: true })}
             title="Previous step (←)"
             className="grid h-9 w-9 place-items-center border border-line text-mut transition-colors hover:border-amber hover:text-amber"
           >
@@ -541,7 +558,7 @@ export default function Walkthrough() {
             )}
           </button>
           <button
-            onClick={() => go(step + 1)}
+            onClick={() => go(step + 1, { single: true })}
             title="Next step (→)"
             className="grid h-9 w-9 place-items-center border border-line text-mut transition-colors hover:border-amber hover:text-amber"
           >
@@ -564,7 +581,7 @@ export default function Walkthrough() {
           {STEPS.map((s, i) => (
             <button
               key={s.id}
-              onClick={() => go(i)}
+              onClick={() => go(i, { single: true })}
               title={`${i + 1}. ${s.title}`}
               className="group relative flex-1 overflow-hidden border border-line/70 bg-line/40 transition-colors hover:border-line2"
             >

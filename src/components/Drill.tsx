@@ -19,6 +19,7 @@ export default function Drill() {
   const startRef = useRef(0);
   const timer = useRef(0);
   const advance = useRef(0);
+  const locked = useRef(false);
 
   const cleanup = () => {
     window.clearTimeout(timer.current);
@@ -27,6 +28,7 @@ export default function Drill() {
   useEffect(() => cleanup, []);
 
   const spawn = (r: number) => {
+    locked.current = false;
     roundRef.current = r;
     setRound(r);
     setTarget({
@@ -40,6 +42,8 @@ export default function Drill() {
   };
 
   const resolve = (hit: boolean, timeout = false) => {
+    if (locked.current) return;
+    locked.current = true;
     window.clearTimeout(timer.current);
     if (hit) {
       const bonus = Math.max(0, Math.round((1 - (performance.now() - startRef.current) / WINDOW_MS) * 100));

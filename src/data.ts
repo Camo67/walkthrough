@@ -115,7 +115,7 @@ export const STEPS: Step[] = [
     narration: "Click RUN TESTS. The button press is captured as a before/after pair of frames.",
     logs: ["click(e1) #run-tests", "pytest -q dispatched"],
     duration: 1800,
-    cursor: [8.5, 9],
+    cursor: [24, 9.5],
   },
   {
     id: "s09",
